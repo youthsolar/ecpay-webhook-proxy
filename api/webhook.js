@@ -82,8 +82,8 @@ module.exports = async (req, res) => {
             
             console.log(`[${startTime}] 🚀 準備 JSON Payload:`, JSON.stringify(jsonPayload, null, 2));
             
-            // Replace with your actual Zoho Creator Custom API URL and Public Key
-            const zohoApiUrl = 'https://www.zohoapis.com/creator/custom/uneedwind/handle_ecpay_return?publickey=W6nH8Tnw5SwYT4O3pQX01RSNy'; // Placeholder
+            // Zoho Creator Custom API URL with Public Key from app variables
+            const zohoApiUrl = 'https://www.zohoapis.com/creator/custom/uneedwind/handle_ecpay_return?publickey=W6nH8Tnw5SwYT4O3pQX01RSNy';
             
             const postData = JSON.stringify(jsonPayload);
             
