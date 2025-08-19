@@ -1,13 +1,7 @@
 {
   "functions": {
-    "api/webhook.js": {
-      "runtime": "nodejs18.x"
+    "api/*.js": {
+      "runtime": "nodejs20.x"
     }
-  },
-  "rewrites": [
-    {
-      "source": "/webhook",
-      "destination": "/api/webhook"
-    }
-  ]
+  }
 }
