@@ -1,0 +1,20 @@
+{
+  "name": "ecpay-webhook-proxy",
+  "version": "1.0.0",
+  "description": "ECPay webhook proxy service for Zoho Creator",
+  "main": "api/webhook.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "vercel build",
+    "deploy": "vercel deploy"
+  },
+  "keywords": [
+    "ecpay",
+    "webhook",
+    "proxy",
+    "zoho",
+    "creator"
+  ],
+  "author": "Lunar Tom",
+  "license": "MIT"
+}
