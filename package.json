@@ -4,9 +4,9 @@
   "description": "ECPay webhook proxy service for Zoho Creator",
   "main": "api/webhook.js",
   "scripts": {
-    "dev": "vercel dev",
-    "build": "vercel build",
-    "deploy": "vercel deploy"
+    "dev": "node api/webhook.js",
+    "build": "echo 'No build step required for Serverless Functions'",
+    "start": "node api/webhook.js"
   },
   "keywords": [
     "ecpay",
