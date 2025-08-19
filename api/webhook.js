@@ -2,7 +2,10 @@
 // 用途：接收 ECPay 的 application/x-www-form-urlencoded 回調
 // 轉換為 JSON 格式後轉發給 Zoho Creator
 
-export default async function handler(req, res) {
+const querystring = require('querystring');
+const https = require('https');
+
+module.exports = async (req, res) => {
     // 設定 CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST');
@@ -10,31 +13,37 @@ export default async function handler(req, res) {
     
     // 記錄開始時間
     const startTime = new Date().toISOString();
-    console.log(`[${startTime}] ECPay Webhook Proxy 啟動`);
+    console.log(`[${startTime}] 🔥 ECPay Webhook Proxy 啟動`);
     
-    try {
-        // 檢查請求方法
-        if (req.method !== 'POST') {
-            console.log(`[${startTime}] 錯誤：非 POST 請求`);
-            return res.status(405).send('0|Method Not Allowed');
-        }
-        
-        // 獲取 ECPay 發送的原始資料
-        let rawBody = '';
-        
-        // Vercel 會自動解析 body，但我們需要原始格式
-        if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
-            // 如果是 form-urlencoded，req.body 已經被解析了
-            const parsedData = req.body;
-            console.log(`[${startTime}] 自動解析的資料:`, parsedData);
+    // 檢查請求方法
+    if (req.method !== 'POST') {
+        console.log(`[${startTime}] ❌ 錯誤：非 POST 請求，方法：${req.method}`);
+        return res.status(405).send('0|Method Not Allowed');
+    }
+    
+    let body = '';
+    
+    // 接收資料
+    req.on('data', (chunk) => {
+        body += chunk.toString();
+    });
+    
+    req.on('end', async () => {
+        try {
+            console.log(`[${startTime}] 🔍 ECPay 原始資料:`, body);
+            console.log(`[${startTime}] 📋 Content-Type:`, req.headers['content-type']);
+            
+            // 解析 form-urlencoded 資料
+            const parsedData = querystring.parse(body);
+            console.log(`[${startTime}] 📦 解析後資料:`, parsedData);
             
             // 驗證必要欄位
             const requiredFields = ['MerchantTradeNo', 'RtnCode', 'CheckMacValue'];
-            for (const field of requiredFields) {
-                if (!parsedData[field]) {
-                    console.log(`[${startTime}] 錯誤：缺少必要欄位 ${field}`);
-                    return res.status(400).send(`0|Missing required field: ${field}`);
-                }
+            const missingFields = requiredFields.filter(field => !parsedData[field]);
+            
+            if (missingFields.length > 0) {
+                console.error(`[${startTime}] ❌ 缺少必要欄位:`, missingFields);
+                return res.status(400).send('0|Missing required fields');
             }
             
             // 準備要發送給 Zoho Creator 的 JSON 資料
@@ -68,51 +77,60 @@ export default async function handler(req, res) {
                 
                 // 處理資訊
                 ProcessedAt: new Date().toISOString(),
-                OriginalContentType: 'application/x-www-form-urlencoded',
-                ProxyVersion: '1.0',
-                ProxyHost: req.headers.host
+                OriginalContentType: 'application/x-www-form-urlencoded'
             };
             
-            console.log(`[${startTime}] 準備發送的 JSON:`, JSON.stringify(jsonPayload, null, 2));
+            console.log(`[${startTime}] 🚀 準備 JSON Payload:`, JSON.stringify(jsonPayload, null, 2));
             
-            // 發送到 Zoho Creator
-            const zohoApiUrl = 'https://www.zohoapis.com/creator/custom/uneedwind/handle_ecpay_return?publickey=W6nH8Tnw5SwYT4O3pQX01RSNy';
+            // Replace with your actual Zoho Creator Custom API URL and Public Key
+            const zohoApiUrl = 'https://www.zohoapis.com/creator/custom/uneedwind/handle_ecpay_return?publickey=W6nH8Tnw5SwYT4O3pQX01RSNy'; // Placeholder
             
-            try {
-                const zohoResponse = await fetch(zohoApiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'User-Agent': 'ECPay-Webhook-Proxy-Vercel/1.0'
-                    },
-                    body: JSON.stringify(jsonPayload)
-                });
-                
-                const responseText = await zohoResponse.text();
-                console.log(`[${startTime}] Zoho Creator 回應碼:`, zohoResponse.status);
-                console.log(`[${startTime}] Zoho Creator 回應內容:`, responseText);
-                
-                // 根據 Zoho Creator 的回應決定回傳給 ECPay 的內容
-                if (zohoResponse.ok) {
-                    console.log(`[${startTime}] ✅ 成功處理 ECPay Webhook`);
-                    return res.status(200).send('1|OK');
-                } else {
-                    console.log(`[${startTime}] ❌ Zoho Creator 處理失敗`);
-                    return res.status(500).send('0|Zoho Processing Error');
+            const postData = JSON.stringify(jsonPayload);
+            
+            const options = {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'User-Agent': 'ECPay-Webhook-Proxy/1.0'
                 }
-                
-            } catch (fetchError) {
-                console.error(`[${startTime}] ❌ 呼叫 Zoho Creator 失敗:`, fetchError);
-                return res.status(500).send('0|Internal Server Error');
-            }
+            };
             
-        } else {
-            console.log(`[${startTime}] 錯誤：不支援的 Content-Type`);
-            return res.status(400).send('0|Unsupported Content-Type');
+            const zohoReq = https.request(zohoApiUrl, options, (zohoRes) => {
+                let responseData = '';
+                zohoRes.on('data', (chunk) => {
+                    responseData += chunk;
+                });
+                zohoRes.on('end', () => {
+                    console.log(`[${startTime}] ✅ Zoho Creator 回應:`, responseData);
+                    console.log(`[${startTime}] 📊 狀態碼:`, zohoRes.statusCode);
+                    
+                    if (zohoRes.statusCode === 200) {
+                        res.status(200).send('1|OK');
+                        console.log(`[${startTime}] 🎉 成功處理 ECPay Webhook`);
+                    } else {
+                        console.error(`[${startTime}] ❌ Zoho Creator 處理失敗:`, responseData);
+                        res.status(500).send('0|Zoho Processing Error');
+                    }
+                });
+            });
+            
+            zohoReq.on('error', (error) => {
+                console.error(`[${startTime}] ❌ 發送到 Zoho Creator 失敗:`, error);
+                res.status(500).send('0|Internal Server Error');
+            });
+            
+            zohoReq.write(postData);
+            zohoReq.end();
+            
+        } catch (parseError) {
+            console.error(`[${startTime}] ❌ 資料解析錯誤:`, parseError);
+            res.status(400).send('0|Parse Error');
         }
-        
-    } catch (error) {
-        console.error(`[${startTime}] ❌ 系統錯誤:`, error);
-        return res.status(500).send('0|System Error');
-    }
-}
+    });
+    
+    req.on('error', (error) => {
+        console.error(`[${startTime}] ❌ 請求錯誤:`, error);
+        res.status(500).send('0|Request Error');
+    });
+};
