@@ -1,0 +1,49 @@
+# Cloud Build configuration for CI/CD
+steps:
+  # Build Python application
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/python-app:$COMMIT_SHA', './python-app']
+    
+  # Run tests
+  - name: 'gcr.io/$PROJECT_ID/python-app:$COMMIT_SHA'
+    args: ['python', '-m', 'pytest', 'tests/']
+    dir: 'python-app'
+    
+  # Push to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/python-app:$COMMIT_SHA']
+    
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'python-app'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/python-app:$COMMIT_SHA'
+      - '--region'
+      - 'asia-east1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      
+  # Deploy N8n to Compute Engine (optional)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud compute instance-templates create n8n-template \
+          --machine-type=e2-medium \
+          --metadata-from-file startup-script=deployment/gcp/startup-script.sh \
+          --tags=http-server,https-server
+
+# Build timeout
+timeout: '1200s'
+
+# Artifacts to store
+artifacts:
+  objects:
+    location: 'gs://$PROJECT_ID-build-artifacts'
+    paths: ['python-app/dist/*']
