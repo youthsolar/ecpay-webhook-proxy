@@ -1,0 +1,26 @@
+# Web框架
+Flask==3.0.0
+gunicorn==21.2.0
+
+# 資料庫
+psycopg2-binary==2.9.9
+SQLAlchemy==2.0.23
+
+# HTTP客戶端
+requests==2.31.0
+httpx==0.25.2
+
+# 環境變數管理
+python-dotenv==1.0.0
+
+# 日誌和監控
+structlog==23.2.0
+
+# GCP相關
+google-cloud-storage==2.10.0
+google-cloud-logging==3.8.0
+google-cloud-secret-manager==2.16.4
+
+# 工具庫
+pydantic==2.5.0
+python-dateutil==2.8.2

@@ -1,0 +1,85 @@
+{
+  "name": "ECPay Webhook Processing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ecpay-webhook",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "ecpay-webhook-id"
+    },
+    {
+      "parameters": {
+        "functionCode": "// 處理ECPay webhook數據\nconst webhookData = items[0].json;\n\n// 記錄接收到的數據\nconsole.log('Received ECPay webhook:', webhookData);\n\n// 驗證必要欄位\nif (!webhookData.MerchantTradeNo || !webhookData.RtnCode) {\n  throw new Error('Missing required fields');\n}\n\n// 處理支付狀態\nlet paymentStatus = 'unknown';\nif (webhookData.RtnCode === '1') {\n  paymentStatus = 'success';\n} else {\n  paymentStatus = 'failed';\n}\n\n// 返回處理後的數據\nreturn [{\n  json: {\n    ...webhookData,\n    paymentStatus,\n    processedAt: new Date().toISOString(),\n    source: 'ecpay'\n  }\n}];"
+      },
+      "id": "process-webhook",
+      "name": "Process Webhook Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.PYTHON_APP_URL}}/api/webhook",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "data",
+              "value": "={{JSON.stringify($json)}}"
+            }
+          ]
+        }
+      },
+      "id": "send-to-python",
+      "name": "Send to Python App",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Process Webhook Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Webhook Data": {
+      "main": [
+        [
+          {
+            "node": "Send to Python App",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "id": "example-workflow"
+}

@@ -1,0 +1,6 @@
+# Terraform變數範例文件
+# 複製此文件為 terraform.tfvars 並填入實際值
+
+project_id = "your-gcp-project-id"
+region     = "asia-east1"
+zone       = "asia-east1-a"
