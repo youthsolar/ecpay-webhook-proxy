@@ -1,0 +1,43 @@
+# Google App Engine配置文件
+runtime: python39
+
+# 實例設定
+instance_class: F2
+automatic_scaling:
+  min_instances: 1
+  max_instances: 10
+  target_cpu_utilization: 0.6
+
+# 環境變數
+env_variables:
+  FLASK_ENV: production
+  GOOGLE_CLOUD_PROJECT: your-project-id
+  
+# 靜態文件處理
+handlers:
+- url: /static
+  static_dir: static
+  
+- url: /.*
+  script: auto
+
+# 健康檢查
+readiness_check:
+  path: "/health"
+  check_interval_sec: 5
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+
+liveness_check:
+  path: "/health"
+  check_interval_sec: 30
+  timeout_sec: 4
+  failure_threshold: 4
+  success_threshold: 2
+
+# 資源限制
+resources:
+  cpu: 1
+  memory_gb: 0.5
+  disk_size_gb: 10
